@@ -5,7 +5,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from fbprophet import Prophet
+from prophet import Prophet
 
 st.title('Stock Price Prediction')
 
