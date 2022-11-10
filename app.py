@@ -1,27 +1,20 @@
-# Build a streamlit app that predicts future stock prices
+# Build a streamlit app that predicts stock prices
 
 import streamlit as st
-import pandas as pd
-import numpy as np
 import yfinance as yf
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from fbprophet import Prophet
 from fbprophet.plot import plot_plotly
+from plotly import graph_objs as go
 
-# Set the page layout to wide
+# Set page layout to wide
 st.set_page_config(layout="wide")
 
-# Set the title
-st.title("Stock Price Prediction App")
+st.title('Stock Price Prediction App')
 
-# Set the subheader
-st.markdown("""
-This app predicts the **future stock prices**!
-""")
+# Create a sidebar header
 st.sidebar.header('User Input Parameters')
 
-# Function to get the user input
+# Create a function to get the user input
 
 
 def get_input():
@@ -30,69 +23,83 @@ def get_input():
     stock_symbol = st.sidebar.text_input("Stock Symbol", "GOOG")
     return start_date, end_date, stock_symbol
 
-# Function to get the company name
+# Create a function to get the company name
 
 
 def get_company_name(symbol):
     if symbol == 'GOOG':
         return 'Google'
-    elif symbol == 'AAPL':
-        return 'Apple'
     elif symbol == 'MSFT':
         return 'Microsoft'
-    elif symbol == 'GME':
-        return 'Gamestop'
+    elif symbol == 'AMZN':
+        return 'Amazon'
+    elif symbol == 'FB':
+        return 'Facebook'
+    elif symbol == 'AAPL':
+        return 'Apple'
+    elif symbol == 'TSLA':
+        return 'Tesla'
+    elif symbol == 'SPY':
+        return 'S&P 500'
+    elif symbol == 'VTI':
+        return 'Vanguard Technology ETF'
     else:
         'None'
 
-# Function to get the proper company data and the proper timeframe
+# Create a function to get the proper company data and the proper timeframe from the user start date to the end date
 
 
+@st.cache
 def get_data(symbol, start, end):
     # Load the data
-    if symbol.upper() == 'GME':
+    if symbol.upper() == 'GOOG':
         df = yf.download(symbol, start, end)
     else:
-        df = yf.download(symbol, start, end)
-    # Get the company name
-    company_name = get_company_name(symbol.upper())
-    # Rename the columns
-    df = df.rename(columns={"Open": "open", "High": "high", "Low": "low",
-                   "Close": "close", "Adj Close": "adj_close", "Volume": "volume"})
+        # Set the ticker symbol
+        tickerSymbol = symbol.upper()
+        # Get the data for this ticker
+        tickerData = yf.Ticker(tickerSymbol)
+        # Get the historical prices for this ticker
+        df = tickerData.history(period='1d', start=start, end=end)
+    # Return the dataframe
     return df
 
-# Function to plot the close price of the stock
+# Create a function to plot the closing price of the stock
 
 
 def plot_raw_data():
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df.index, y=df['close'], name="stock_close"))
+    fig.add_trace(go.Scatter(x=df.index, y=df['Close'], name="stock_close"))
     fig.layout.update(title_text="Time Series Data",
                       xaxis_rangeslider_visible=True)
     st.plotly_chart(fig)
 
-# Function to predict future prices
+# Create a function to predict stock prices using Facebook Prophet
 
 
-def predict_prices(df, days):
-    df_train = df[['Date', 'close']]
-    df_train = df_train.rename(columns={"Date": "ds", "close": "y"})
-
-    m = Prophet()
-    m.fit(df_train)
-    future = m.make_future_dataframe(periods=days)
-    forecast = m.predict(future)
-    return forecast
-
-# Function to plot the predicted prices
-
-
-def plot_prediction(df, days):
-    forecast = predict_prices(df, days)
-    fig1 = plot_plotly(m, forecast)
+def predict_prices(df, symbol):
+    # Rename the columns
+    df = df.reset_index()
+    df.rename(columns={'Date': 'ds', 'Close': 'y'}, inplace=True)
+    # Instantiate the model
+    model = Prophet()
+    # Fit the model
+    model.fit(df)
+    # Create a dataframe to hold the future dates
+    future_dates = model.make_future_dataframe(periods=365)
+    # Make predictions
+    prediction = model.predict(future_dates)
+    # Create a dataframe to hold the predictions
+    df = prediction[['ds', 'yhat', 'yhat_lower', 'yhat_upper']]
+    # Rename the columns
+    df.rename(columns={'ds': 'Date', 'yhat': 'Predictions'}, inplace=True)
+    # Set the date as the index
+    df.set_index('Date', inplace=True)
+    # Plot the predictions
+    fig1 = plot_plotly(model, prediction)
     st.plotly_chart(fig1)
-    fig2 = m.plot_components(forecast)
-    st.write(fig2)
+    # Show the data
+    st.write(df)
 
 
 # Get the user input
@@ -101,27 +108,25 @@ start, end, symbol = get_input()
 # Get the data
 df = get_data(symbol, start, end)
 
+# Get the company name
+company_name = get_company_name(symbol.upper())
+
+# Display the closing price
+st.header(company_name + ' Close Price\n')
+st.line_chart(df['Close'])
+
+# Display the volume
+st.header(company_name + ' Volume\n')
+st.line_chart(df['Volume'])
+
+# Show the raw data
+if st.button('Show Raw Data'):
+    st.write(df)
+
+# Predict stock prices
+st.header('Predict Stock Prices')
+st.write('Predict closing prices for the next 365 days')
+predict_prices(df, symbol)
+
 # Plot the raw data
-st.header('Raw Data')
 plot_raw_data()
-
-# Predict future prices
-st.header('Forecast Data')
-
-# Number of days to predict
-days = st.slider('Days of prediction:', 1, 365)
-st.write('You selected:', days, 'days')
-
-# Show and plot the data
-st.subheader('Forecast data')
-forecast_data = predict_prices(df, days)
-st.write(forecast_data.tail())
-
-# Plot the forecast data
-st.subheader('Forecast data')
-plot_prediction(df, days)
-
-# Show the data
-st.subheader('Forecast components')
-fig2 = m.plot_components(forecast_data)
-st.write(fig2)
