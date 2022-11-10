@@ -2,5 +2,5 @@ streamlit
 yfinance
 pandas
 numpy
-matplotlib
 prophet
+plotly
