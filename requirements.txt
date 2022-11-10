@@ -4,3 +4,4 @@ pandas
 numpy
 fbprophet
 plotly
+pystan==2.19
