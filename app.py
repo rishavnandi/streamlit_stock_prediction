@@ -5,8 +5,10 @@ from fbprophet import Prophet
 from fbprophet.plot import plot_plotly
 from plotly import graph_objs as go
 
+url = "https://img.icons8.com/plasticine/200/null/apple-stocks.png"
 with st.sidebar:
     st.title("Stock Price Prediction App")
+    st.image(url, width=200)
     START = st.date_input("Start Date", value=date(2012, 1, 1))
     stocks = ("AAPL", "GOOGL", "MSFT", "AMZN", "TSLA",
               "META", "VGT", "SPY", "QQQ", "NVDA", "ADBE",)
