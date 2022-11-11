@@ -3,5 +3,6 @@ plotly==5.11.0
 yfinance==0.1.85
 numpy==1.20.3
 cython==0.29.32
+pandas==1.5.1
 pystan==2.19.1.1
 fbprophet==0.7.1
